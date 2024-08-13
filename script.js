@@ -1,8 +1,13 @@
 // Wait for the DOM to load
 document.addEventListener('DOMContentLoaded', function() {
+    const dayButtons = document.querySelectorAll('.day-btn');
+    const resourceButtons = document.querySelectorAll('.resource-btn');
+    const taskOptionButtons = document.querySelectorAll('.task-option-btn');
+    const modal = document.getElementById('embed-modal');
+    const embedIframe = document.getElementById('embed-iframe');
+    const closeModal = document.querySelector('.close-modal');
 
     // Task Interactivity: Toggle task details visibility
-    const dayButtons = document.querySelectorAll('.day-btn');
     dayButtons.forEach(button => {
         button.addEventListener('click', function() {
             const details = this.nextElementSibling;
@@ -10,23 +15,73 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Gamification: Points system (simplified example)
-    let points = localStorage.getItem('points') || 0;
-    const pointDisplay = document.createElement('div');
-    pointDisplay.id = 'points';
-    pointDisplay.innerText = `Points: ${points}`;
-    document.body.insertBefore(pointDisplay, document.querySelector('main'));
-
-    const taskButtons = document.querySelectorAll('.task-options button');
-    taskButtons.forEach(button => {
+    // Resource Button Click Handler
+    resourceButtons.forEach(button => {
         button.addEventListener('click', function() {
-            const taskPoints = parseInt(this.dataset.points || '10');
-            points = parseInt(points) + taskPoints;
-            localStorage.setItem('points', points);
-            pointDisplay.innerText = `Points: ${points}`;
-            alert(`You earned ${taskPoints} points!`);
+            const url = this.dataset.url;
+            // Attempt to embed the resource
+            openResource(url);
         });
     });
+
+    // Task Option Button Click Handler
+    taskOptionButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const parentTask = this.closest('.task-details');
+            const resourceList = parentTask.querySelectorAll('.resource-btn');
+            resourceList.forEach(resBtn => {
+                if (!resBtn.dataset.accessed) {
+                    resBtn.click();  // Automatically click to open resource
+                }
+            });
+        });
+    });
+
+    // Open the resource, try to embed or redirect if necessary
+    function openResource(url) {
+        // Simple check for embeddable content
+        if (url.includes('youtube') || url.includes('google') || url.includes('docs.python.org')) {
+            embedIframe.src = url;
+            modal.style.display = 'block';
+        } else {
+            window.open(url, '_blank');
+        }
+    }
+
+    // Mark resource as accessed after opening
+    embedIframe.addEventListener('load', function() {
+        const activeButton = document.querySelector(`[data-url="${embedIframe.src}"]`);
+        if (activeButton) {
+            activeButton.dataset.accessed = true;
+        }
+        checkTaskCompletion();
+    });
+
+    // Close modal event
+    closeModal.addEventListener('click', function() {
+        modal.style.display = 'none';
+        embedIframe.src = ''; // Clear the iframe to stop the video or other resource
+    });
+
+    // Check if task can be marked as completed
+    function checkTaskCompletion() {
+        document.querySelectorAll('.task-details').forEach(task => {
+            const resources = task.querySelectorAll('.resource-btn');
+            const completeCheckbox = task.querySelector('.task-complete');
+            let allAccessed = true;
+
+            resources.forEach(res => {
+                if (!res.dataset.accessed) {
+                    allAccessed = false;
+                }
+            });
+
+            completeCheckbox.disabled = !allAccessed;
+        });
+    }
+
+    // Initial check in case of previously completed tasks
+    checkTaskCompletion();
 
     // Notepad Functionality
     const notepad = document.querySelector('#notepad iframe');
